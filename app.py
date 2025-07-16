@@ -1,10 +1,10 @@
 import streamlit as st
+st.set_page_config(page_title="Kurly Meal Solution 데이터보드", layout="wide", page_icon="🛒")
 import pandas as pd
 import urllib.parse
 import os
 import gdown
 
-st.set_page_config(page_title="Kurly Meal Solution 데이터보드", layout="wide", page_icon="🛒")
 # --- Google Drive에서 파일 다운로드 함수 ---
 @st.cache_data
 def download_from_google_drive(file_id: str, output_path: str):
@@ -437,7 +437,7 @@ def show_main():
     st.markdown(nav_html, unsafe_allow_html=True)
 
 # --- 라우팅 ---
-params = st.query_params
+params = st.experimental_get_query_params()
 product = params.get("product", None)
 if isinstance(product, list): product = product[0]
 if product:
