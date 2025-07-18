@@ -68,13 +68,16 @@ def clean_text(text):
 
 # --- 의도 예측 ---
 def predict_intent(user_input, model, tokenizer):
-    text = clean_text(user_input)
-    X_input = tokenizer([text], padding='max_length', truncation=True, max_length=80, return_tensors='tf')
-    dummy_cat = np.zeros((1, 64))
-    pred = model.predict([X_input['input_ids'], X_input['attention_mask'], dummy_cat], verbose=0)
-    idx2label = {0: "RECOMMEND", 1: "TREND", 2: "NEGFAQ"}
-    intent_idx = np.argmax(pred, axis=1)[0]
-    return idx2label.get(intent_idx, "TREND")
+    try:
+        text = clean_text(user_input)
+        X_input = tokenizer([text], padding='max_length', truncation=True, max_length=80, return_tensors='tf')
+        dummy_cat = np.zeros((1, 64))
+        pred = model.predict([X_input['input_ids'], X_input['attention_mask'], dummy_cat], verbose=0)
+        idx2label = {0: "RECOMMEND", 1: "TREND", 2: "NEGFAQ"}
+        intent_idx = np.argmax(pred, axis=1)[0]
+        return idx2label.get(intent_idx, "TREND")
+    except Exception:
+        return "TREND"
 
 # --- intent별 데이터 선택 ---
 def select_df_by_intent(intent, dfs):
@@ -115,3 +118,22 @@ def process_user_input(user_input, intent_model, tokenizer, dfs, emb_dict, sbert
     df = select_df_by_intent(intent, dfs)
     answer = get_best_answer(user_input, df, emb_dict, sbert_model)
     return answer, intent
+
+# --- UI 테스트용 (예시) ---
+if __name__ == "__main__":
+    st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
+    st.title("💬 Kurlypool 챗봇")
+
+    model = load_intent_model()
+    tokenizer = load_tokenizer()
+    sbert_model = load_sbert()
+    dfs = load_answer_dfs()
+    emb_dict = precompute_all_embeddings(dfs, sbert_model)
+
+    user_input = st.text_input("검색", placeholder="무엇을 도와드릴까요?", key="main_search", label_visibility="collapsed")
+
+    if st.button("검색"):
+        if user_input:
+            answer, intent = process_user_input(user_input, model, tokenizer, dfs, emb_dict, sbert_model)
+            st.markdown(f"**의도:** `{intent}`")
+            st.markdown(f"**답변:** {answer}")
