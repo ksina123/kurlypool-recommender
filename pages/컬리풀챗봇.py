@@ -31,8 +31,6 @@ class TFBertModelWrapper(layers.Layer):
 
 # --- 경로 설정 ---
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-JSON_PATH = os.path.join(BASE_PATH, "..", "bert_model", "intent_model.json")
-WEIGHT_PATH = os.path.join(BASE_PATH, "..", "bert_model", "intent_model.weights.h5")
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
 ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
@@ -47,15 +45,25 @@ def clean_text(text):
 # --- 모델, 토크나이저, SBERT 로드 ---
 @st.cache_resource
 def load_model_and_tokenizer():
-    with open(JSON_PATH, "r", encoding="utf-8") as json_file:
+    # JSON 경로
+    model_json_path = os.path.join(BASE_PATH, "bert_model", "intent_model.json")
+    weight_path = os.path.join(BASE_PATH, "bert_model", "intent_model.weights.h5")
+    
+    # 모델 구조 로드
+    with open(model_json_path, "r", encoding="utf-8") as json_file:
         loaded_model_json = json_file.read()
 
-    # 로드 시 반드시 custom_objects 지정
-    pretrained_bert = tf.keras.models.load_model("beomi/kcbert-base", compile=False)
-    model = model_from_json(loaded_model_json, custom_objects={"TFBertModelWrapper": TFBertModelWrapper})
-    model.load_weights(WEIGHT_PATH)
+    # 모델 복원
+    pretrained_bert = TFAutoModel.from_pretrained(TOKENIZER_NAME)
+    model = tf.keras.models.model_from_json(
+        loaded_model_json,
+        custom_objects={"TFBertModelWrapper": TFBertModelWrapper}
+    )
+    model.load_weights(weight_path)
 
+    # 토크나이저 로드
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
+
     return model, tokenizer
 
 @st.cache_resource
