@@ -6,11 +6,10 @@ import re
 import tensorflow as tf
 import time
 from transformers import AutoTokenizer, TFAutoModel
-from tensorflow.keras.models import load_model
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# --- 커스텀 BERT 레이어 정의 ---
+# --- 커스텀 BERT 래퍼 ---
 from tensorflow.keras import layers
 class TFBertModelWrapper(layers.Layer):
     def __init__(self, model_name="beomi/kcbert-base", **kwargs):
@@ -21,17 +20,34 @@ class TFBertModelWrapper(layers.Layer):
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
-# --- 설정 ---
-MODEL_PATH = '0715_intent_model_final.h5'
-TOKENIZER_NAME = 'beomi/kcbert-base'
-SBERT_MODEL = 'jhgan/ko-sroberta-multitask'
-CSV_FILES = {
-    "TREND": "챗봇특징추출최종.csv"
-}
+# --- 모델 아키텍처 정의 함수 ---
+def create_model():
+    input_ids = tf.keras.Input(shape=(80,), dtype=tf.int32, name="input_ids")
+    attention_mask = tf.keras.Input(shape=(80,), dtype=tf.int32, name="attention_mask")
+    categorical_features = tf.keras.Input(shape=(64,), dtype=tf.float32, name="categorical_features")
 
+    bert_output = TFBertModelWrapper("beomi/kcbert-base")([input_ids, attention_mask])
+    pooled_output = tf.keras.layers.GlobalAveragePooling1D()(bert_output)
+
+    x = tf.keras.layers.concatenate([pooled_output, categorical_features])
+    x = tf.keras.layers.Dense(128, activation='relu')(x)
+    x = tf.keras.layers.Dense(3, activation='softmax')(x)
+
+    model = tf.keras.Model(inputs=[input_ids, attention_mask, categorical_features], outputs=x)
+    return model
+
+# --- 설정 ---
+WEIGHT_PATH = "pages/bert_model/intent_model.weights.h5"
+TOKENIZER_NAME = "beomi/kcbert-base"
+SBERT_MODEL = "jhgan/ko-sroberta-multitask"
+CSV_FILES = {"TREND": "챗봇특징추출최종.csv"}
+
+# --- 로더 함수 ---
 @st.cache_resource
 def load_intent_model():
-    return load_model(MODEL_PATH, custom_objects={'TFBertModelWrapper': TFBertModelWrapper})
+    model = create_model()
+    model.load_weights(WEIGHT_PATH)
+    return model
 
 @st.cache_resource
 def load_tokenizer():
@@ -68,16 +84,13 @@ def clean_text(text):
 
 # --- 의도 예측 ---
 def predict_intent(user_input, model, tokenizer):
-    try:
-        text = clean_text(user_input)
-        X_input = tokenizer([text], padding='max_length', truncation=True, max_length=80, return_tensors='tf')
-        dummy_cat = np.zeros((1, 64))
-        pred = model.predict([X_input['input_ids'], X_input['attention_mask'], dummy_cat], verbose=0)
-        idx2label = {0: "RECOMMEND", 1: "TREND", 2: "NEGFAQ"}
-        intent_idx = np.argmax(pred, axis=1)[0]
-        return idx2label.get(intent_idx, "TREND")
-    except Exception:
-        return "TREND"
+    text = clean_text(user_input)
+    X_input = tokenizer([text], padding='max_length', truncation=True, max_length=80, return_tensors='tf')
+    dummy_cat = np.zeros((1, 64))
+    pred = model.predict([X_input['input_ids'], X_input['attention_mask'], dummy_cat], verbose=0)
+    idx2label = {0: "RECOMMEND", 1: "TREND", 2: "NEGFAQ"}
+    intent_idx = np.argmax(pred, axis=1)[0]
+    return idx2label.get(intent_idx, "TREND")
 
 # --- intent별 데이터 선택 ---
 def select_df_by_intent(intent, dfs):
@@ -94,7 +107,7 @@ def precompute_all_embeddings(dfs, sbert_model):
             emb_dict[key] = {"emb": emb, "texts": texts}
     return emb_dict
 
-# --- 베스트 답변 유사도 계산 ---
+# --- 유사도 기반 답변 선택 ---
 def get_best_answer(user_input, answer_df, emb_dict, sbert_model):
     if answer_df is None or len(answer_df) == 0:
         return "답변 후보 데이터가 없습니다."
@@ -112,28 +125,9 @@ def get_best_answer(user_input, answer_df, emb_dict, sbert_model):
     best_idx = sims.argmax()
     return texts[best_idx]
 
-# --- 전체 파이프라인 처리 ---
+# --- 전체 파이프라인 ---
 def process_user_input(user_input, intent_model, tokenizer, dfs, emb_dict, sbert_model):
     intent = predict_intent(user_input, intent_model, tokenizer)
     df = select_df_by_intent(intent, dfs)
     answer = get_best_answer(user_input, df, emb_dict, sbert_model)
     return answer, intent
-
-# --- UI 테스트용 (예시) ---
-if __name__ == "__main__":
-    st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
-    st.title("💬 Kurlypool 챗봇")
-
-    model = load_intent_model()
-    tokenizer = load_tokenizer()
-    sbert_model = load_sbert()
-    dfs = load_answer_dfs()
-    emb_dict = precompute_all_embeddings(dfs, sbert_model)
-
-    user_input = st.text_input("검색", placeholder="무엇을 도와드릴까요?", key="main_search", label_visibility="collapsed")
-
-    if st.button("검색"):
-        if user_input:
-            answer, intent = process_user_input(user_input, model, tokenizer, dfs, emb_dict, sbert_model)
-            st.markdown(f"**의도:** `{intent}`")
-            st.markdown(f"**답변:** {answer}")
