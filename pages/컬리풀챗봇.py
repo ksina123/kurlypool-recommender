@@ -15,13 +15,13 @@ st.title("🍳 Kurlypool 챗봇")
 st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을 입력해 주세요.")
 
 MAX_LEN = 80
-CATEGORICAL_DIM = 64  # 원-핫 인코딩 범주형 피처 차원
+CATEGORICAL_DIM = 64
 
-# --- 커스텀 BERT 레이어 ---
+# --- 커스텀 BERT 래퍼 ---
 class TFBertModelWrapper(layers.Layer):
-    def __init__(self, model_name, **kwargs):
+    def __init__(self, pretrained_model, **kwargs):
         super().__init__(**kwargs)
-        self.bert = TFAutoModel.from_pretrained(model_name)
+        self.bert = pretrained_model
 
     def call(self, inputs):
         input_ids, attention_mask = inputs
@@ -29,17 +29,14 @@ class TFBertModelWrapper(layers.Layer):
         return outputs.last_hidden_state
 
 # --- 모델 생성 함수 ---
-def create_model():
+def create_model(pretrained_bert):
     input_ids = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="input_ids")
     attention_mask = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="attention_mask")
     categorical_features = layers.Input(shape=(CATEGORICAL_DIM,), dtype=tf.float32, name="categorical_features")
 
-    bert_wrapper = TFBertModelWrapper("beomi/kcbert-base")
-    bert_output = bert_wrapper([input_ids, attention_mask])
-
+    bert_output = TFBertModelWrapper(pretrained_bert)([input_ids, attention_mask])
     cnn_out = layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
     cnn_out = layers.GlobalMaxPooling1D()(cnn_out)
-
     concat = layers.concatenate([cnn_out, categorical_features])
     fc = layers.Dense(64, activation='relu')(concat)
     output = layers.Dense(2, activation='softmax')(fc)
@@ -63,7 +60,8 @@ def clean_text(text):
 # --- 모델, 토크나이저, SBERT 로드 ---
 @st.cache_resource
 def load_model_and_tokenizer():
-    model = create_model()
+    pretrained_bert = TFAutoModel.from_pretrained(TOKENIZER_NAME)
+    model = create_model(pretrained_bert)
     model.load_weights(WEIGHT_PATH)
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
     return model, tokenizer
