@@ -15,7 +15,7 @@ st.title("🍳 Kurlypool 챗봇")
 st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을 입력해 주세요.")
 
 MAX_LEN = 80
-CATEGORICAL_DIM = 64  # 원-핫 인코딩 범주형 피처 차원
+CATEGORICAL_DIM = 64  # 반드시 학습 시 사용한 범주형 차원과 동일해야 함
 
 # --- BERT 래핑 레이어 ---
 class TFBertModelWrapper(layers.Layer):
@@ -46,14 +46,14 @@ def create_model():
 
     return Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
 
-# --- 경로 및 설정 ---
+# --- 경로 ---
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-WEIGHT_PATH = os.path.join(BASE_PATH, "..", "0715_intent_model_final.h5")
+WEIGHT_PATH = os.path.join(BASE_PATH, "..", "bert_model", "intent_model.weights.h5")
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
-ANSWER_CSV_PATH = "챗봇특징추출최종.csv"
+ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
 
-# --- 전처리 함수 ---
+# --- 전처리 ---
 def clean_text(text):
     text = re.sub(r'([a-zA-Z0-9])[^a-zA-Z0-9가-힣\s]+([a-zA-Z0-9])', r'\1 \2', str(text))
     text = re.sub(r'[^a-zA-Z0-9가-힣\s]', '', text)
@@ -91,7 +91,7 @@ def compute_embeddings(df, sbert_model):
     embeddings = sbert_model.encode(texts, convert_to_tensor=False, show_progress_bar=False)
     return texts, embeddings
 
-# --- 예측 및 응답 생성 ---
+# --- 예측 및 응답 ---
 def predict_intent(text, model, tokenizer):
     clean = clean_text(text)
     tokens = tokenizer([clean], padding="max_length", truncation=True, max_length=MAX_LEN, return_tensors="tf")
