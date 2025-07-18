@@ -1,14 +1,15 @@
-streamlit
-tensorflow==2.10.0
-transformers==4.20.1
-gdown
-tf-keras
-pandas
-numpy
-sentence-transformers
+streamlit==1.46.1
+tensorflow==2.19.0
+keras==3.10.0
+protobuf==5.29.5
+numpy==2.1.3
+typing_extensions==4.13.1
+transformers==4.53.2
+torch==2.6.0+cu118
+sentence-transformers==5.0.0
 scikit-learn
-streamlit-vercel-handler
-sentence-transformers
-
+pandas
+matplotlib
+torch==2.6.0
 
 
