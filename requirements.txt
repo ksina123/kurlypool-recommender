@@ -1,0 +1,14 @@
+streamlit
+tensorflow==2.10.0
+transformers==4.20.1
+gdown
+tf-keras
+pandas
+numpy
+sentence-transformers
+scikit-learn
+streamlit-vercel-handler
+sentence-transformers
+
+
+
