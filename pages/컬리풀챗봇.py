@@ -8,9 +8,9 @@ import time
 from transformers import AutoTokenizer, TFAutoModel
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-
-# --- 커스텀 BERT 래퍼 ---
 from tensorflow.keras import layers
+
+# --- 커스텀 BERT 레이어 정의 ---
 class TFBertModelWrapper(layers.Layer):
     def __init__(self, model_name="beomi/kcbert-base", **kwargs):
         super().__init__(**kwargs)
@@ -20,7 +20,7 @@ class TFBertModelWrapper(layers.Layer):
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
-# --- 모델 아키텍처 정의 함수 ---
+# --- 모델 구조 정의 ---
 def create_model():
     input_ids = tf.keras.Input(shape=(80,), dtype=tf.int32, name="input_ids")
     attention_mask = tf.keras.Input(shape=(80,), dtype=tf.int32, name="attention_mask")
@@ -42,7 +42,7 @@ TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL = "jhgan/ko-sroberta-multitask"
 CSV_FILES = {"TREND": "챗봇특징추출최종.csv"}
 
-# --- 로더 함수 ---
+# --- 모델 및 리소스 로딩 함수 ---
 @st.cache_resource
 def load_intent_model():
     model = create_model()
@@ -96,7 +96,7 @@ def predict_intent(user_input, model, tokenizer):
 def select_df_by_intent(intent, dfs):
     return dfs.get("TREND")
 
-# --- 사전 임베딩 계산 ---
+# --- 임베딩 사전 계산 ---
 @st.cache_data
 def precompute_all_embeddings(dfs, sbert_model):
     emb_dict = {}
@@ -107,7 +107,7 @@ def precompute_all_embeddings(dfs, sbert_model):
             emb_dict[key] = {"emb": emb, "texts": texts}
     return emb_dict
 
-# --- 유사도 기반 답변 선택 ---
+# --- 유사도 기반 최적 답변 추출 ---
 def get_best_answer(user_input, answer_df, emb_dict, sbert_model):
     if answer_df is None or len(answer_df) == 0:
         return "답변 후보 데이터가 없습니다."
@@ -125,9 +125,30 @@ def get_best_answer(user_input, answer_df, emb_dict, sbert_model):
     best_idx = sims.argmax()
     return texts[best_idx]
 
-# --- 전체 파이프라인 ---
+# --- 전체 파이프라인 처리 ---
 def process_user_input(user_input, intent_model, tokenizer, dfs, emb_dict, sbert_model):
     intent = predict_intent(user_input, intent_model, tokenizer)
     df = select_df_by_intent(intent, dfs)
     answer = get_best_answer(user_input, df, emb_dict, sbert_model)
     return answer, intent
+
+# --- Streamlit UI ---
+st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
+st.title("🍳 Kurlypool 챗봇")
+st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을 입력해 주세요.")
+
+# 리소스 로딩
+intent_model = load_intent_model()
+tokenizer = load_tokenizer()
+sbert_model = load_sbert()
+dfs = load_answer_dfs()
+emb_dict = precompute_all_embeddings(dfs, sbert_model)
+
+# 사용자 입력 처리
+user_input = st.text_input("❓ 궁금한 점을 입력하세요:")
+
+if st.button("답변 받기") and user_input.strip():
+    with st.spinner("답변 생성 중..."):
+        answer, intent = process_user_input(user_input, intent_model, tokenizer, dfs, emb_dict, sbert_model)
+        st.markdown(f"**예측된 의도:** `{intent}`")
+        st.markdown(f"**챗봇 응답:** {answer}")
