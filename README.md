@@ -21,15 +21,12 @@
   <img src="https://img.shields.io/badge/BeautifulSoup-8B4513?style=for-the-badge&logo=soup&logoColor=white">
 
   <!-- 🧹 데이터 처리 -->
-  <h4 style="margin-top: 20px;">데이터 처리</h4>
+  <h4 style="margin-top: 20px;">EDA 및 데이터 시각화</h4>
   <img src="https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white">
   <img src="https://img.shields.io/badge/numpy-013243?style=for-the-badge&logo=numpy&logoColor=white">
-
-  <!-- 📊 데이터 시각화 -->
-  <h4 style="margin-top: 20px;">데이터 시각화</h4>
   <img src="https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge&logo=plotly&logoColor=white">
   <img src="https://img.shields.io/badge/Seaborn-2D3F73?style=for-the-badge&logo=python&logoColor=white">
-
+  
   <!-- 🧠 모델링 / 머신러닝 -->
   <h4 style="margin-top: 20px;">모델링 / 머신러닝</h4>
   <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white">
