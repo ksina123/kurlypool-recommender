@@ -37,7 +37,8 @@ def create_model():
     return model
 
 # --- 설정 ---
-WEIGHT_PATH = "../intent_model.weights.h5"
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+WEIGHT_PATH = os.path.join(CURRENT_DIR, "..", "intent_model.weights.h5")
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL = "jhgan/ko-sroberta-multitask"
 CSV_FILES = {"TREND": "챗봇특징추출최종.csv"}
