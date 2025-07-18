@@ -37,7 +37,7 @@ def create_model():
     return model
 
 # --- 설정 ---
-WEIGHT_PATH = "pages/bert_model/intent_model.weights.h5"
+WEIGHT_PATH = "intent_model.weights.h5"
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL = "jhgan/ko-sroberta-multitask"
 CSV_FILES = {"TREND": "챗봇특징추출최종.csv"}
