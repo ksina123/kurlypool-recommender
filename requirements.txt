@@ -13,3 +13,4 @@ matplotlib==3.7.1
 gdown
 huggingface_hub==0.14.1
 numpy==1.23.5
+openpyxl
