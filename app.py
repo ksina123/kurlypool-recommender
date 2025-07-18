@@ -204,7 +204,7 @@ def extract_top_hashtags(product, topn=3, min_reviews=5):
     if len(high_score_reviews) < min_reviews:
         filtered = product_reviews
     else:
-        high_score_reviews["리뷰길이"] = high_score_reviews["리뷰"].astype(str).str.len()
+        high_score_reviews.loc[:, "리뷰길이"] = high_score_reviews["리뷰"].astype(str).str.len()
         length_threshold = high_score_reviews["리뷰길이"].quantile(0.8)
         filtered = high_score_reviews[high_score_reviews["리뷰길이"] >= length_threshold]
         if filtered.empty:
@@ -325,7 +325,12 @@ def show_detail(product):
 def show_main():
     cols = st.columns([2, 10])  # 왼쪽: 검색, 오른쪽: 빈공간
     with cols[0]:
-        search_term = st.text_input("", placeholder="검색어를 입력해 주세요", key="main_search")
+        search_term = st.text_input(
+    label="검색어 입력",
+    placeholder="검색어를 입력해 주세요",
+    key="main_search",
+    label_visibility="collapsed"
+)
     with cols[1]:
         st.write("")
     
