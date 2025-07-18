@@ -4,8 +4,9 @@ import numpy as np
 import os
 import re
 import tensorflow as tf
-from transformers import AutoTokenizer, TFAutoModel
+from transformers import AutoTokenizer
 from tensorflow.keras import layers, Model
+from tensorflow.keras.models import model_from_json
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 
@@ -28,24 +29,10 @@ class TFBertModelWrapper(layers.Layer):
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
-# --- 모델 생성 함수 ---
-def create_model(pretrained_bert):
-    input_ids = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="input_ids")
-    attention_mask = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="attention_mask")
-    categorical_features = layers.Input(shape=(CATEGORICAL_DIM,), dtype=tf.float32, name="categorical_features")
-
-    bert_output = TFBertModelWrapper(pretrained_bert)([input_ids, attention_mask])
-    cnn_out = layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
-    cnn_out = layers.GlobalMaxPooling1D()(cnn_out)
-    concat = layers.concatenate([cnn_out, categorical_features])
-    fc = layers.Dense(64, activation='relu')(concat)
-    output = layers.Dense(2, activation='softmax')(fc)
-
-    return Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
-
 # --- 경로 설정 ---
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-WEIGHT_PATH = os.path.join(BASE_PATH, "..", "intent_model.weights.h5")
+JSON_PATH = os.path.join(BASE_PATH, "..", "bert_model", "intent_model.json")
+WEIGHT_PATH = os.path.join(BASE_PATH, "..", "bert_model", "intent_model.weights.h5")
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
 ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
@@ -60,9 +47,14 @@ def clean_text(text):
 # --- 모델, 토크나이저, SBERT 로드 ---
 @st.cache_resource
 def load_model_and_tokenizer():
-    pretrained_bert = TFAutoModel.from_pretrained(TOKENIZER_NAME)
-    model = create_model(pretrained_bert)
+    with open(JSON_PATH, "r", encoding="utf-8") as json_file:
+        loaded_model_json = json_file.read()
+
+    # 로드 시 반드시 custom_objects 지정
+    pretrained_bert = tf.keras.models.load_model("beomi/kcbert-base", compile=False)
+    model = model_from_json(loaded_model_json, custom_objects={"TFBertModelWrapper": TFBertModelWrapper})
     model.load_weights(WEIGHT_PATH)
+
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
     return model, tokenizer
 
@@ -119,4 +111,3 @@ if st.button("답변 받기") and user_input.strip():
 
         st.markdown(f"**예측된 의도:** `{intent}`")
         st.markdown(f"**챗봇 응답:** {answer}")
-
