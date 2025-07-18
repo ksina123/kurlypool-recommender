@@ -11,33 +11,33 @@
   <h3>기술스택</h3>
 
   <!-- 💻 프로그래밍 언어 -->
-  <h4 style="margin-top: 20px;">💻 프로그래밍 언어</h4>
+  <h4 style="margin-top: 20px;"> 프로그래밍 언어</h4>
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
 
   <!-- 🌐 크롤링 / 스크래핑 -->
-  <h4 style="margin-top: 20px;">🌐 크롤링 / 스크래핑</h4>
+  <h4 style="margin-top: 20px;"> 데이터 크롤링</h4>
   <img src="https://img.shields.io/badge/Selenium-43B02A?style=for-the-badge&logo=selenium&logoColor=white">
   <img src="https://img.shields.io/badge/selenium--stealth-4E4E4E?style=for-the-badge&logo=ghost&logoColor=white">
   <img src="https://img.shields.io/badge/BeautifulSoup-8B4513?style=for-the-badge&logo=soup&logoColor=white">
 
   <!-- 🧹 데이터 처리 -->
-  <h4 style="margin-top: 20px;">🧹 데이터 처리</h4>
+  <h4 style="margin-top: 20px;">데이터 처리</h4>
   <img src="https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white">
   <img src="https://img.shields.io/badge/numpy-013243?style=for-the-badge&logo=numpy&logoColor=white">
 
   <!-- 📊 데이터 시각화 -->
-  <h4 style="margin-top: 20px;">📊 데이터 시각화</h4>
+  <h4 style="margin-top: 20px;">데이터 시각화</h4>
   <img src="https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge&logo=plotly&logoColor=white">
   <img src="https://img.shields.io/badge/Seaborn-2D3F73?style=for-the-badge&logo=python&logoColor=white">
 
   <!-- 🧠 모델링 / 머신러닝 -->
-  <h4 style="margin-top: 20px;">🧠 모델링 / 머신러닝</h4>
+  <h4 style="margin-top: 20px;">모델링 / 머신러닝</h4>
   <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white">
   <img src="https://img.shields.io/badge/XGBoost-EC4E24?style=for-the-badge&logo=xgboost&logoColor=white">
   <img src="https://img.shields.io/badge/LightGBM-9ACD32?style=for-the-badge&logo=leaflet&logoColor=white">
 
   <!-- 🧠 자연어 처리 (NLP) -->
-  <h4 style="margin-top: 20px;">🧠 자연어 처리 (NLP)</h4>
+  <h4 style="margin-top: 20px;">자연어 처리 (NLP)</h4>
   <img src="https://img.shields.io/badge/KcBERT-0098D0?style=for-the-badge&logo=keras&logoColor=white">
   <img src="https://img.shields.io/badge/RoBERTa-FFDB00?style=for-the-badge&logo=robo3t&logoColor=black">
   <img src="https://img.shields.io/badge/BiLSTM-800080?style=for-the-badge&logo=curve&logoColor=white">
@@ -45,24 +45,19 @@
   <img src="https://img.shields.io/badge/CNN-FF6F61?style=for-the-badge&logo=stackbit&logoColor=white">
 
   <!-- 🌐 웹앱 및 UI -->
-  <h4 style="margin-top: 20px;">🌐 웹앱 및 UI</h4>
+  <h4 style="margin-top: 20px;">웹앱 및 UI</h4>
   <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white">
   <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white">
   <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white">
-
-  <!-- 🔧 버전관리 -->
-  <h4 style="margin-top: 20px;">🔧 버전관리</h4>
-  <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white">
-  <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white">
-
-  <!-- ☁️ 배포 -->
-  <h4 style="margin-top: 20px;">☁️ 배포</h4>
-  <img src="https://img.shields.io/badge/Streamlit Cloud-FF4B4B?style=for-the-badge&logo=cloudflare&logoColor=white">
-
   <!-- 🗃️ 데이터 -->
-  <h4 style="margin-top: 20px;">🗃️ 데이터</h4>
+  <h4 style="margin-top: 20px;">데이터</h4>
   <img src="https://img.shields.io/badge/CSV-46A36F?style=for-the-badge&logo=filezilla&logoColor=white">
 </div>
+  <!-- 🔧 버전관리 -->
+  <h4 style="margin-top: 20px;">버전관리 및 배포</h4>
+  <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white">
+  <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white">
+  <img src="https://img.shields.io/badge/Streamlit Cloud-FF4B4B?style=for-the-badge&logo=cloudflare&logoColor=white">
 
   <p><br></p>
   <p><strong>프로젝트 내용</strong></p>
