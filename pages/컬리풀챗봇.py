@@ -48,7 +48,7 @@ def create_model():
 
 # --- 경로 및 설정 ---
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-WEIGHT_PATH = os.path.join(BASE_PATH, "..", "bert_model", "0715_intent_model_final.h5")
+WEIGHT_PATH = os.path.join(BASE_PATH, "..", "0715_intent_model_final.h5")
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
 ANSWER_CSV_PATH = "챗봇특징추출최종.csv"
