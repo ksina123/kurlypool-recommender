@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
 
   <!-- 🌐 크롤링 / 스크래핑 -->
-  <h4 style="margin-top: 20px;"> 데이터 크롤링</h4>
+  <h4 style="margin-top: 20px;"> 데이터 수집</h4>
   <img src="https://img.shields.io/badge/Selenium-43B02A?style=for-the-badge&logo=selenium&logoColor=white">
   <img src="https://img.shields.io/badge/selenium--stealth-4E4E4E?style=for-the-badge&logo=ghost&logoColor=white">
   <img src="https://img.shields.io/badge/BeautifulSoup-8B4513?style=for-the-badge&logo=soup&logoColor=white">
