@@ -21,23 +21,19 @@ class TFBertModelWrapper(layers.Layer):
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
-# --- 모델 구조 정의 ---
-# --- 모델 생성 함수 (CNN 포함, 2-class softmax) ---
+# --- 모델 생성 함수 ---
 def create_model():
-    max_len = 80  # 입력 길이
-
+    max_len = 80
     input_ids = tf.keras.Input(shape=(max_len,), dtype=tf.int32, name="input_ids")
     attention_mask = tf.keras.Input(shape=(max_len,), dtype=tf.int32, name="attention_mask")
     categorical_features = tf.keras.Input(shape=(64,), dtype=tf.float32, name="categorical_features")
 
     bert_wrapper = TFBertModelWrapper("beomi/kcbert-base")
-    bert_output = bert_wrapper([input_ids, attention_mask])  # (batch, max_len, hidden)
+    bert_output = bert_wrapper([input_ids, attention_mask])
 
-    # CNN으로 특징 추출
     cnn_out = tf.keras.layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
     cnn_out = tf.keras.layers.GlobalMaxPooling1D()(cnn_out)
 
-    # 결합
     concatenated = tf.keras.layers.Concatenate()([cnn_out, categorical_features])
     fc = tf.keras.layers.Dense(64, activation='relu')(concatenated)
     output = tf.keras.layers.Dense(2, activation='softmax')(fc)
@@ -45,13 +41,12 @@ def create_model():
     model = tf.keras.Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
     return model
 
-
 # --- 설정 ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 WEIGHT_PATH = os.path.join(CURRENT_DIR, "..", "0715_intent_model_final.h5")
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL = "jhgan/ko-sroberta-multitask"
-CSV_FILES = {"TREND": "챗봇특징추출최종.csv"}
+CSV_FILES = {"TREND": "신발자_책법_시대정보.csv"}  # 실제 파일명으로 수정 필요
 
 # --- 모델 및 리소스 로딩 함수 ---
 @st.cache_resource
@@ -145,17 +140,15 @@ def process_user_input(user_input, intent_model, tokenizer, dfs, emb_dict, sbert
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
-st.title("🍳 Kurlypool 챗봇")
+st.title("\ud83c\udf73 Kurlypool \ucc45\ubc29")
 st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을 입력해 주세요.")
 
-# 리소스 로딩
 intent_model = load_intent_model()
 tokenizer = load_tokenizer()
 sbert_model = load_sbert()
 dfs = load_answer_dfs()
 emb_dict = precompute_all_embeddings(dfs, sbert_model)
 
-# 사용자 입력 처리
 user_input = st.text_input("❓ 궁금한 점을 입력하세요:")
 
 if st.button("답변 받기") and user_input.strip():
