@@ -24,27 +24,27 @@ class TFBertModelWrapper(layers.Layer):
 # --- 모델 구조 정의 ---
 # --- 모델 생성 함수 (CNN 포함, 2-class softmax) ---
 def create_model():
-    max_len = 80  # 혹은 너가 설정한 max_len 값 사용
+    max_len = 80  # 입력 길이
 
     input_ids = tf.keras.Input(shape=(max_len,), dtype=tf.int32, name="input_ids")
     attention_mask = tf.keras.Input(shape=(max_len,), dtype=tf.int32, name="attention_mask")
-    categorical_features = tf.keras.Input(shape=(64,), dtype=tf.float32, name="categorical_features")  # 범주형 피처
+    categorical_features = tf.keras.Input(shape=(64,), dtype=tf.float32, name="categorical_features")
 
-    # BERT 모델
     bert_wrapper = TFBertModelWrapper("beomi/kcbert-base")
-    bert_output = bert_wrapper([input_ids, attention_mask])  # (batch, max_len, hidden_size)
+    bert_output = bert_wrapper([input_ids, attention_mask])  # (batch, max_len, hidden)
 
-    # CNN + GlobalMaxPooling
+    # CNN으로 특징 추출
     cnn_out = tf.keras.layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
     cnn_out = tf.keras.layers.GlobalMaxPooling1D()(cnn_out)
 
-    # 결합: BERT + 범주형 피처
-    x = tf.keras.layers.concatenate([cnn_out, categorical_features])
-    x = tf.keras.layers.Dense(64, activation='relu')(x)
-    output = tf.keras.layers.Dense(2, activation='softmax')(x)  # 학습 당시 softmax(2-class) 기준
+    # 결합
+    concatenated = tf.keras.layers.Concatenate()([cnn_out, categorical_features])
+    fc = tf.keras.layers.Dense(64, activation='relu')(concatenated)
+    output = tf.keras.layers.Dense(2, activation='softmax')(fc)
 
     model = tf.keras.Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
     return model
+
 
 # --- 설정 ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
