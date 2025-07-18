@@ -10,30 +10,40 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from tensorflow.keras import layers
 
-# --- 커스텀 BERT 레이어 정의 ---
+# --- BERT 래핑 레이어 ---
 class TFBertModelWrapper(layers.Layer):
     def __init__(self, model_name="beomi/kcbert-base", **kwargs):
-        super().__init__(**kwargs)
+        super(TFBertModelWrapper, self).__init__(**kwargs)
         self.bert = TFAutoModel.from_pretrained(model_name)
+
     def call(self, inputs):
         input_ids, attention_mask = inputs
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
 # --- 모델 구조 정의 ---
+# --- 모델 생성 함수 (CNN 포함, 2-class softmax) ---
 def create_model():
-    input_ids = tf.keras.Input(shape=(80,), dtype=tf.int32, name="input_ids")
-    attention_mask = tf.keras.Input(shape=(80,), dtype=tf.int32, name="attention_mask")
-    categorical_features = tf.keras.Input(shape=(64,), dtype=tf.float32, name="categorical_features")
+    max_len = 80  # 혹은 너가 설정한 max_len 값 사용
 
-    bert_output = TFBertModelWrapper("beomi/kcbert-base")([input_ids, attention_mask])
-    pooled_output = tf.keras.layers.GlobalAveragePooling1D()(bert_output)
+    input_ids = tf.keras.Input(shape=(max_len,), dtype=tf.int32, name="input_ids")
+    attention_mask = tf.keras.Input(shape=(max_len,), dtype=tf.int32, name="attention_mask")
+    categorical_features = tf.keras.Input(shape=(64,), dtype=tf.float32, name="categorical_features")  # 범주형 피처
 
-    x = tf.keras.layers.concatenate([pooled_output, categorical_features])
-    x = tf.keras.layers.Dense(128, activation='relu')(x)
-    x = tf.keras.layers.Dense(3, activation='softmax')(x)
+    # BERT 모델
+    bert_wrapper = TFBertModelWrapper("beomi/kcbert-base")
+    bert_output = bert_wrapper([input_ids, attention_mask])  # (batch, max_len, hidden_size)
 
-    model = tf.keras.Model(inputs=[input_ids, attention_mask, categorical_features], outputs=x)
+    # CNN + GlobalMaxPooling
+    cnn_out = tf.keras.layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
+    cnn_out = tf.keras.layers.GlobalMaxPooling1D()(cnn_out)
+
+    # 결합: BERT + 범주형 피처
+    x = tf.keras.layers.concatenate([cnn_out, categorical_features])
+    x = tf.keras.layers.Dense(64, activation='relu')(x)
+    output = tf.keras.layers.Dense(2, activation='softmax')(x)  # 학습 당시 softmax(2-class) 기준
+
+    model = tf.keras.Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
     return model
 
 # --- 설정 ---
