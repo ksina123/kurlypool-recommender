@@ -9,6 +9,7 @@ from tensorflow.keras import layers, Model
 from tensorflow.keras.models import model_from_json
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+from transformers import TFAutoModel
 
 # --- 기본 설정 ---
 st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
