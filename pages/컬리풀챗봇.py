@@ -33,11 +33,12 @@ def create_model():
     cnn_out = tf.keras.layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
     cnn_out = tf.keras.layers.GlobalMaxPooling1D()(cnn_out)
 
-    fc = tf.keras.layers.Dense(64, activation='relu')(cnn_out)
-    output = tf.keras.layers.Dense(2, activation='softmax')(fc)
+    # ❌ 중간 Dense 제거
+    output = tf.keras.layers.Dense(2, activation='softmax')(cnn_out)
 
     model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=output)
     return model
+
 
 # --- 경로 설정 ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
