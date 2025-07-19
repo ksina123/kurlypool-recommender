@@ -4,22 +4,33 @@ import numpy as np
 import os
 import re
 import tensorflow as tf
-from transformers import AutoTokenizer
 from tensorflow.keras import layers, Model
-from tensorflow.keras.models import model_from_json
+from transformers import TFAutoModel, AutoTokenizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
-from transformers import TFAutoModel
 
 # --- 기본 설정 ---
 st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
 st.title("🍳 Kurlypool 챗봇")
 st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을 입력해 주세요.")
 
+# --- 하이퍼파라미터 ---
 MAX_LEN = 80
 CATEGORICAL_DIM = 64
+TOKENIZER_NAME = "beomi/kcbert-base"
+SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+WEIGHT_PATH = os.path.join(BASE_PATH, "bert_model", "intent_model.weights.h5")
+ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
 
-# --- 커스텀 BERT 래퍼 ---
+# --- 텍스트 정제 함수 ---
+def clean_text(text):
+    text = re.sub(r'([a-zA-Z0-9])[^a-zA-Z0-9가-힣\s]+([a-zA-Z0-9])', r'\1 \2', str(text))
+    text = re.sub(r'[^a-zA-Z0-9가-힣\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+# --- 커스텀 BERT 래퍼 레이어 ---
 class TFBertModelWrapper(layers.Layer):
     def __init__(self, pretrained_model, **kwargs):
         super().__init__(**kwargs)
@@ -30,47 +41,38 @@ class TFBertModelWrapper(layers.Layer):
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
-# --- 경로 설정 ---
-BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-TOKENIZER_NAME = "beomi/kcbert-base"
-SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
-ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
-
-# --- 전처리 함수 ---
-def clean_text(text):
-    text = re.sub(r'([a-zA-Z0-9])[^a-zA-Z0-9가-힣\s]+([a-zA-Z0-9])', r'\1 \2', str(text))
-    text = re.sub(r'[^a-zA-Z0-9가-힣\s]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
-# --- 모델, 토크나이저, SBERT 로드 ---
+# --- 모델 로딩 함수 ---
 @st.cache_resource
 def load_model_and_tokenizer():
-    # JSON 경로
-    model_json_path = os.path.join(BASE_PATH, "bert_model", "intent_model.json")
-    weight_path = os.path.join(BASE_PATH, "bert_model", "intent_model.weights.h5")
-    
-    # 모델 구조 로드
-    with open(model_json_path, "r", encoding="utf-8") as json_file:
-        loaded_model_json = json_file.read()
+    def create_model():
+        input_ids = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="input_ids")
+        attention_mask = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="attention_mask")
+        categorical_features = layers.Input(shape=(CATEGORICAL_DIM,), name="categorical_features")
 
-    # 모델 복원
-    pretrained_bert = TFAutoModel.from_pretrained(TOKENIZER_NAME)
-    model = tf.keras.models.model_from_json(
-        loaded_model_json,
-        custom_objects={"TFBertModelWrapper": TFBertModelWrapper}
-    )
-    model.load_weights(weight_path)
+        bert = TFAutoModel.from_pretrained(TOKENIZER_NAME)
+        bert_wrapper = TFBertModelWrapper(bert)
+        bert_output = bert_wrapper([input_ids, attention_mask])
 
-    # 토크나이저 로드
+        cnn_out = layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
+        cnn_out = layers.GlobalMaxPooling1D()(cnn_out)
+
+        merged = layers.concatenate([cnn_out, categorical_features])
+        fc = layers.Dense(64, activation='relu')(merged)
+        output = layers.Dense(2, activation='softmax')(fc)
+
+        return Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
+
+    model = create_model()
+    model.load_weights(WEIGHT_PATH)
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
-
     return model, tokenizer
 
+# --- SBERT 로드 ---
 @st.cache_resource
 def load_sbert():
     return SentenceTransformer(SBERT_MODEL_NAME)
 
+# --- 답변 데이터프레임 로드 ---
 @st.cache_data
 def load_answer_df():
     encodings = ["utf-8", "cp949", "euc-kr", "utf-8-sig"]
@@ -84,6 +86,7 @@ def load_answer_df():
             continue
     return pd.DataFrame()
 
+# --- 임베딩 계산 ---
 @st.cache_data
 def compute_embeddings(df, sbert_model):
     texts = df["답변"].astype(str).tolist()
@@ -98,14 +101,14 @@ def predict_intent(text, model, tokenizer):
     pred = model.predict([tokens["input_ids"], tokens["attention_mask"], dummy_cat], verbose=0)
     return "RECOMMEND" if np.argmax(pred) == 0 else "TREND"
 
-# --- 유사한 답변 추출 ---
+# --- 유사 답변 추출 ---
 def get_best_answer(query, texts, embeddings, sbert_model):
     query_vec = sbert_model.encode([query], convert_to_tensor=False)
     sims = cosine_similarity(query_vec, embeddings)[0]
     best_idx = sims.argmax()
     return texts[best_idx]
 
-# --- 실행 부분 ---
+# --- Streamlit 인터페이스 ---
 user_input = st.text_input("❓ 궁금한 점을 입력하세요:")
 
 if st.button("답변 받기") and user_input.strip():
