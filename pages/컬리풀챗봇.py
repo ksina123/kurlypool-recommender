@@ -50,7 +50,10 @@ def create_model():
     attention_mask = tf.keras.Input(shape=(MAX_LEN,), dtype=tf.int32, name='attention_mask')
     categorical_input = tf.keras.Input(shape=(CATEGORICAL_DIM,), name='categorical_features')
 
-    bert_output = TFBertModelWrapper()(inputs=(input_ids, attention_mask))
+    # 여기 수정
+    bert_wrapper = TFBertModelWrapper("beomi/kcbert-base")
+    bert_output = bert_wrapper([input_ids, attention_mask])
+    
     cnn_output = layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
     cnn_output = layers.GlobalMaxPooling1D()(cnn_output)
 
