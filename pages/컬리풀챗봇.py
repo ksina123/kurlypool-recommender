@@ -4,10 +4,10 @@ import numpy as np
 import os
 import re
 import tensorflow as tf
-from tensorflow.keras import layers, Model
+from tensorflow.keras import layers, Model, Input
 from transformers import TFAutoModel, AutoTokenizer
-from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # --- 기본 설정 ---
 st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
@@ -20,7 +20,7 @@ CATEGORICAL_DIM = 64
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-WEIGHT_PATH = os.path.join(BASE_PATH, "bert_model", "intent_model.weights.h5")
+WEIGHT_PATH = os.path.join(BASE_PATH, "bert_model", "tf_model.h5")
 ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
 
 # --- 텍스트 정제 함수 ---
@@ -32,47 +32,47 @@ def clean_text(text):
 
 # --- 커스텀 BERT 래퍼 레이어 ---
 class TFBertModelWrapper(layers.Layer):
-    def __init__(self, pretrained_model, **kwargs):
+    def __init__(self, model_name, **kwargs):
         super().__init__(**kwargs)
-        self.bert = pretrained_model
+        self.bert = TFAutoModel.from_pretrained(model_name)
 
     def call(self, inputs):
         input_ids, attention_mask = inputs
         outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
         return outputs.last_hidden_state
 
-# --- 모델 로딩 함수 ---
+# --- 모델 생성 함수 ---
+def create_model():
+    input_ids = Input(shape=(MAX_LEN,), dtype=tf.int32, name="input_ids")
+    attention_mask = Input(shape=(MAX_LEN,), dtype=tf.int32, name="attention_mask")
+    categorical_features = Input(shape=(CATEGORICAL_DIM,), name="categorical_features")
+
+    bert_wrapper = TFBertModelWrapper(TOKENIZER_NAME)
+    bert_output = bert_wrapper([input_ids, attention_mask])
+
+    cnn_out = layers.Conv1D(128, kernel_size=3, activation='relu')(bert_output)
+    cnn_out = layers.GlobalMaxPooling1D()(cnn_out)
+
+    merged = layers.Concatenate()([cnn_out, categorical_features])
+    fc = layers.Dense(64, activation='relu')(merged)
+    output = layers.Dense(2, activation='softmax')(fc)
+
+    return Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
+
+# --- 모델 + 토크나이저 로딩 ---
 @st.cache_resource
 def load_model_and_tokenizer():
-    def create_model():
-        input_ids = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="input_ids")
-        attention_mask = layers.Input(shape=(MAX_LEN,), dtype=tf.int32, name="attention_mask")
-        categorical_features = layers.Input(shape=(CATEGORICAL_DIM,), name="categorical_features")
-
-        bert = TFAutoModel.from_pretrained(TOKENIZER_NAME)
-        bert_wrapper = TFBertModelWrapper(bert)
-        bert_output = bert_wrapper([input_ids, attention_mask])
-
-        cnn_out = layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
-        cnn_out = layers.GlobalMaxPooling1D()(cnn_out)
-
-        merged = layers.concatenate([cnn_out, categorical_features])
-        fc = layers.Dense(64, activation='relu')(merged)
-        output = layers.Dense(2, activation='softmax')(fc)
-
-        return Model(inputs=[input_ids, attention_mask, categorical_features], outputs=output)
-
     model = create_model()
     model.load_weights(WEIGHT_PATH)
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
     return model, tokenizer
 
-# --- SBERT 로드 ---
+# --- SBERT 로딩 ---
 @st.cache_resource
 def load_sbert():
     return SentenceTransformer(SBERT_MODEL_NAME)
 
-# --- 답변 데이터프레임 로드 ---
+# --- 답변 CSV 로딩 ---
 @st.cache_data
 def load_answer_df():
     encodings = ["utf-8", "cp949", "euc-kr", "utf-8-sig"]
@@ -101,11 +101,11 @@ def predict_intent(text, model, tokenizer):
     pred = model.predict([tokens["input_ids"], tokens["attention_mask"], dummy_cat], verbose=0)
     return "RECOMMEND" if np.argmax(pred) == 0 else "TREND"
 
-# --- 유사 답변 추출 ---
+# --- 답변 추출 ---
 def get_best_answer(query, texts, embeddings, sbert_model):
     query_vec = sbert_model.encode([query], convert_to_tensor=False)
     sims = cosine_similarity(query_vec, embeddings)[0]
-    best_idx = sims.argmax()
+    best_idx = np.argmax(sims)
     return texts[best_idx]
 
 # --- Streamlit 인터페이스 ---
