@@ -10,12 +10,12 @@ from transformers import AutoTokenizer
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# --- 설정 ---
+# --- 페이지 설정 ---
 st.set_page_config(page_title="Kurlypool 챗봇", layout="centered")
 st.title("🍳 Kurlypool 챗봇")
 st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을 입력해 주세요.")
 
-# --- 하이퍼파라미터 ---
+# --- 설정값 ---
 MAX_LEN = 80
 CATEGORICAL_DIM = 64
 TOKENIZER_NAME = "beomi/kcbert-base"
@@ -24,40 +24,37 @@ BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_PATH, "bert_model", "tf_model.h5")
 ANSWER_CSV_PATH = os.path.join(BASE_PATH, "..", "챗봇특징추출최종.csv")
 
-# --- 텍스트 정제 ---
+# --- 텍스트 정제 함수 ---
 def clean_text(text):
     text = re.sub(r'([a-zA-Z0-9])[^a-zA-Z0-9가-힣\s]+([a-zA-Z0-9])', r'\1 \2', str(text))
     text = re.sub(r'[^a-zA-Z0-9가-힣\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# --- 커스텀 BERT 래퍼 레이어 (복원용) ---
+# --- BERT 래퍼 레이어 정의 ---
 class TFBertModelWrapper(layers.Layer):
     def __init__(self, model_name=None, **kwargs):
         super().__init__(**kwargs)
         from transformers import TFAutoModel
-        if model_name:
-            self.bert = TFAutoModel.from_pretrained(model_name)
-        else:
-            self.bert = TFAutoModel.from_pretrained("beomi/kcbert-base")
+        self.bert = TFAutoModel.from_pretrained(model_name or "beomi/kcbert-base")
 
     def call(self, inputs):
         input_ids, attention_mask = inputs
         return self.bert({'input_ids': input_ids, 'attention_mask': attention_mask}).last_hidden_state
 
-# --- 모델 및 토크나이저 로드 ---
+# --- 모델 및 토크나이저 로딩 ---
 @st.cache_resource
 def load_model_and_tokenizer():
     model = load_model(MODEL_PATH, custom_objects={"TFBertModelWrapper": TFBertModelWrapper})
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
     return model, tokenizer
 
-# --- SBERT 로딩 ---
+# --- SBERT 모델 로딩 ---
 @st.cache_resource
 def load_sbert():
     return SentenceTransformer(SBERT_MODEL_NAME)
 
-# --- 답변 CSV 로딩 ---
+# --- 답변 데이터 로딩 ---
 @st.cache_data
 def load_answer_df():
     encodings = ["utf-8", "cp949", "euc-kr", "utf-8-sig"]
@@ -78,7 +75,7 @@ def compute_embeddings(df, sbert_model):
     embeddings = sbert_model.encode(texts, convert_to_tensor=False, show_progress_bar=False)
     return texts, embeddings
 
-# --- 의도 예측 ---
+# --- 의도 예측 함수 ---
 def predict_intent(text, model, tokenizer):
     clean = clean_text(text)
     tokens = tokenizer([clean], padding="max_length", truncation=True, max_length=MAX_LEN, return_tensors="tf")
@@ -86,14 +83,14 @@ def predict_intent(text, model, tokenizer):
     pred = model.predict([tokens["input_ids"], tokens["attention_mask"], dummy_cat], verbose=0)
     return "RECOMMEND" if np.argmax(pred) == 0 else "TREND"
 
-# --- 답변 추출 ---
+# --- 유사 답변 추출 ---
 def get_best_answer(query, texts, embeddings, sbert_model):
     query_vec = sbert_model.encode([query], convert_to_tensor=False)
     sims = cosine_similarity(query_vec, embeddings)[0]
     best_idx = np.argmax(sims)
     return texts[best_idx]
 
-# --- Streamlit 인터페이스 ---
+# --- Streamlit UI ---
 user_input = st.text_input("❓ 궁금한 점을 입력하세요:")
 
 if st.button("답변 받기") and user_input.strip():
