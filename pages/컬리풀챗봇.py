@@ -4,8 +4,8 @@ import numpy as np
 import os
 import re
 import tensorflow as tf
-from tensorflow.keras import layers
-from transformers import AutoTokenizer
+from tensorflow.keras import layers, Model
+from transformers import AutoTokenizer, TFAutoModel
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -16,7 +16,7 @@ st.markdown("리뷰 기반 간편식 추천 챗봇입니다. 아래에 질문을
 
 # --- 설정값 ---
 MAX_LEN = 80
-CATEGORICAL_DIM = 64
+CATEGORICAL_DIM = 64  # 학습 시 사용했던 피처 차원
 TOKENIZER_NAME = "beomi/kcbert-base"
 SBERT_MODEL_NAME = "jhgan/ko-sroberta-multitask"
 
@@ -37,26 +37,28 @@ def clean_text(text):
 class TFBertModelWrapper(layers.Layer):
     def __init__(self, model_name="beomi/kcbert-base", **kwargs):
         super().__init__(**kwargs)
-        from transformers import TFAutoModel
         self.bert = TFAutoModel.from_pretrained(model_name)
 
     def call(self, inputs):
         input_ids, attention_mask = inputs
-        return self.bert({'input_ids': input_ids, 'attention_mask': attention_mask}).last_hidden_state
+        outputs = self.bert({'input_ids': input_ids, 'attention_mask': attention_mask})
+        return outputs.last_hidden_state
 
-# --- 모델 구조 정의 ---
+# --- CNN + 범주형 피처 포함 모델 구조 정의 ---
 def create_model():
     input_ids = tf.keras.Input(shape=(MAX_LEN,), dtype=tf.int32, name='input_ids')
     attention_mask = tf.keras.Input(shape=(MAX_LEN,), dtype=tf.int32, name='attention_mask')
-    categorical_input = tf.keras.Input(shape=(CATEGORICAL_DIM,), name='categorical_input')
+    categorical_input = tf.keras.Input(shape=(CATEGORICAL_DIM,), name='categorical_features')
 
     bert_output = TFBertModelWrapper()(inputs=(input_ids, attention_mask))
-    x = tf.keras.layers.GlobalAveragePooling1D()(bert_output)
-    x = tf.keras.layers.Concatenate()([x, categorical_input])
-    x = tf.keras.layers.Dense(64, activation='relu')(x)
-    output = tf.keras.layers.Dense(2, activation='softmax')(x)
+    cnn_output = layers.Conv1D(filters=128, kernel_size=3, activation='relu')(bert_output)
+    cnn_output = layers.GlobalMaxPooling1D()(cnn_output)
 
-    model = tf.keras.Model(inputs=[input_ids, attention_mask, categorical_input], outputs=output)
+    x = layers.Concatenate()([cnn_output, categorical_input])
+    x = layers.Dense(64, activation='relu')(x)
+    output = layers.Dense(2, activation='softmax')(x)
+
+    model = Model(inputs=[input_ids, attention_mask, categorical_input], outputs=output)
     return model
 
 # --- 모델 및 토크나이저 로딩 ---
@@ -97,7 +99,7 @@ def compute_embeddings(df, sbert_model):
 def predict_intent(text, model, tokenizer):
     clean = clean_text(text)
     tokens = tokenizer([clean], padding="max_length", truncation=True, max_length=MAX_LEN, return_tensors="tf")
-    dummy_cat = np.zeros((1, CATEGORICAL_DIM))
+    dummy_cat = np.zeros((1, CATEGORICAL_DIM))  # 예측 시 더미 범주형 입력
     pred = model.predict([tokens["input_ids"], tokens["attention_mask"], dummy_cat], verbose=0)
     return "RECOMMEND" if np.argmax(pred) == 0 else "TREND"
 
