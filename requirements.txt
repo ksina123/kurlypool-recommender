@@ -1,6 +1,6 @@
 streamlit==1.46.1
-tensorflow-cpu==2.10.0
-keras==2.10.0
+tensorflow-cpu==2.14.0
+keras==2.14.0
 protobuf==3.20.3
 numpy==1.23.5
 typing_extensions==4.5.0
