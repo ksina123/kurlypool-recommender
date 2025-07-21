@@ -478,7 +478,7 @@ st.markdown(f"""
 }}
 </style>
 <div class="kurly-chatbot-button">
-  <a href="https://kurlypool-recommende.streamlit.app/컬리풀챗봇/" target="_blank">
+  <a href="https://kurlypool-recommende.streamlit.app/%EC%BB%AC%EB%A6%AC%ED%92%80%EC%B1%97%EB%B4%87" target="_blank">
     <img src="data:image/png;base64,{img_base64}" alt="챗봇">
   </a>
 </div>
