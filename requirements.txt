@@ -1,0 +1,12 @@
+streamlit==1.46.1
+tensorflow-cpu==2.10.0
+keras==2.10.0
+protobuf==3.19.6
+transformers==4.30.2
+sentence-transformers==2.2.2
+scikit-learn
+pandas
+numpy
+matplotlib
+gdown
+openpyxl
