@@ -16,6 +16,13 @@
   </li>
 </ul>
 
+<h3>🎥 시연 영상 (Demo)</h3>
+<p>
+  <a href="[https://drive.google.com/file/d/파일ID/view?usp=sharing](https://drive.google.com/file/d/1bTDN-pa3y70VPfTqct_GjatJGPjq4d8B/view?usp=drive_link)" target="_blank">
+    ▶ Google Drive에서 시연 영상 보기
+  </a>
+</p>
+
 
 ## 🛠️ 기술 스택
 ### 💻 개발 환경
